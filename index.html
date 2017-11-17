@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ru" ng-app="MetalPlayer">
+<head>
+    <meta charset="utf-8">
+    <title>Music Player</title>
+    <link rel="stylesheet" href="css/jquery.scrollbar.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/lib/angular.min.js"></script>
+    <script src="js/lib/angular-resource.min.js"></script>
+    <script src="js/lib/jquery-3.1.1.min.js"></script>
+    <script src="js/lib/jquery-ui.min.js"></script>
+    <script src="js/lib/jquery.scrollbar.min.js"></script>
+    <script src="js/app/Playlist.js"></script>
+    <script src="js/app/MPlayer.js"></script>
+    <script src="js/app/MLoader.js"></script>
+    <script src="js/app/MInfo.js"></script>
+    <script src="js/app/music.js"></script>
+</head>
+<body>
+
+<div ng-controller="MPlayer" id="main">
+
+    <div id="MPlayer">
+
+        <audio src="" id="player"
+               ng-src="content/{{playlist[playerState.trackNumber].name}}">
+        </audio>
+
+        <div id="timeLine">
+            <div id="time">{{playerView.time.current}}/{{playerView.time.full}}</div>
+            <div id="fullTime" ng-click="setTime($event)">
+                <div id="progress"
+                     ng-style="{'width': playerView.width}">
+                    <div id="timePicker" ng-mousedown="pickTime()"></div>
+                </div>
+            </div>
+            <div id="loading"
+                 ng-show="playerView.load">
+                Loading
+            </div>
+        </div>
+
+        <div id="title"> {{playlist[playerState.trackNumber].title}}   </div>
+
+        <div id="controls">
+            <div id="button-big">
+                <div id="prev" class="button"
+                     ng-click="toPrev()">
+                    <div></div><div></div>
+                </div>
+                <div id="playpause" class=" button"
+                     ng-class="playerState.mode"
+                     ng-click="playPause()">
+                    <div></div><div></div>
+                </div>
+                <div id="stop" class="button"
+                     ng-click="stop()">
+                    <div></div>
+                </div>
+                <div id="next" class="button"
+                     ng-click="toNext()">
+                    <div></div><div></div>
+                </div>
+            </div>
+
+            <div id="button-sm">
+                <div id="autoplay" class="button" title="Autoplay"
+                     ng-class="playerState.autoplay ? 'on': 'off'"
+                     ng-click="playerState.autoplay = !playerState.autoplay">
+                    <div></div><div></div><div></div><div></div><div></div>
+                </div>
+                <div id="repeat" class="button" title="Repeat"
+                     ng-class="playerState.repeat ? 'on': 'off'"
+                     ng-click="playerState.repeat = !playerState.repeat">
+                    <div></div><div></div>
+                </div>
+                <div id="random" class="button" title="Random"
+                     ng-class="playerState.random? 'on': 'off'"
+                     ng-click="playerState.random = !playerState.random">
+                    <div></div><div></div><div></div><div></div>
+                </div>
+            </div>
+
+            <div id="volKnob">
+                <div class="center"></div>
+                <div id="volPicker"
+                     ng-style="{'transform': playerView.angle}">
+                    <div ng-mousedown="pickVolume($event)"></div>
+                </div>
+            </div>
+
+            <div id="muted">
+                <div title="{{playerState.muted ? 'Unmute': 'Mute'}}"
+                     ng-class="playerState.muted ? 'off': 'on'"
+                     ng-click="mute()"></div>
+                VOLUME
+            </div>
+        </div>
+
+        <div id="trackpicker" class="scrollbar-inner">
+            <div  class="listedTrack"
+                  ng-class="$index==playerState.trackNumber ? 'selectedTrack' : ''"
+                  ng-click="playTrack($index)"
+                  ng-repeat="item in playlist"  >
+                {{$index+1}} {{item.band_name}} -- {{item.title}}
+                <div class="remove" title="Remove from playlist"
+                     ng-click="removeFromPlaylist($event, item)">
+                    &#10060;
+                </div>
+            </div>
+        </div>
+        <div id="showButton">
+             <div title="Edit Track Info"
+                  ng-click="show.trackInfo = !show.trackInfo">&#8505;
+             </div>
+            <div title="Show Library"
+                 ng-click="show.library = !show.library">&#8801;
+            </div>
+            <div title="Load files"
+                 ng-click="show.loader = !show.loader">&#10133;
+            </div>
+        </div>
+    </div>
+
+    <div id="trackInfo" style="display: {{(show.trackInfo)? 'block':'none'}}">
+
+        <div class="closeButton" title="Close Track Info" ng-click="show.trackInfo = false">&#10060;</div>
+
+            <div id="trackTitle">
+                <input type="text"
+                       style="font-size: {{(playlist[playerState.trackNumber].title.length<=30)? '25px':'15px'}}"
+                       ng-model="playlist[playerState.trackNumber].title"
+                       ng-blur="update(playlist[playerState.trackNumber])">
+            </div>
+            <div id="trackCover"
+                 style="background-image: url(content/covers/{{playlist[playerState.trackNumber].cover}})">
+
+            </div>
+            <div class="trackAttr">
+                Album:
+                <input type="text" name="album"
+                       ng-model="playlist[playerState.trackNumber].album_name"
+                       ng-blur="update(playlist[playerState.trackNumber])">
+                <div class="showInfo"
+                     ng-click="showInfo('album', playlist[playerState.trackNumber])">&#8505;
+                </div>
+            </div>
+            <div class="trackAttr">
+                Band:
+                <input  type="text"
+                        ng-model="playlist[playerState.trackNumber].band_name"
+                        ng-blur="update(playlist[playerState.trackNumber])">
+                <div class="showInfo"
+                     ng-click="showInfo('band', playlist[playerState.trackNumber])">&#8505;
+                </div>
+            </div>
+            <div class="trackAttr">
+                Genre:
+                <input type="text"
+                       ng-model="playlist[playerState.trackNumber].genre_name"
+                       ng-blur="update(playlist[playerState.trackNumber])">
+                <div class="showInfo"
+                     ng-click="showInfo('genre', playlist[playerState.trackNumber])">&#8505;
+                </div>
+            </div>
+            <div class="trackAttr number">
+                <input type="text"
+                       ng-model="playlist[playerState.trackNumber].number"
+                       ng-blur="update(playlist[playerState.trackNumber])"> /
+            <div>
+              {{playlist[playerState.trackNumber].quantity}}
+           </div>
+        </div>
+     </div>
+
+    <div id="MInfo" ng-controller="MInfo"
+         style="display: {{(show.MInfo)? 'block':'none'}}">
+
+        <div class="closeButton" title="Close Info"
+             ng-click="show.MInfo = false">&#10060;
+        </div>
+
+        <div class="content scrollbar-inner"
+             ng-switch="info.type">
+
+            <div ng-switch-when="album">
+                <div ng-switch="info.mode">
+
+                    <div ng-switch-when="display">
+                        <div class="title"
+                             style="font-size: {{info.content.album_name.length<=30 ? '25px':'15px'}}">
+                            {{info.content.album_name}}
+                        </div>
+                        <div class="cover"
+                             style="background-image: url(content/covers/{{info.content.cover}})">
+                        </div>
+                        <div class="attr">
+                            Year: {{(info.content.year)? info.content.year : 'Unknown'}}
+                            <br>Number of tracks: {{(info.content.quantity)? info.content.quantity : '???'}}
+                            <br>Length: {{(info.content.length)? info.content.length : '???'}}
+                        </div>
+                        <div class="description">
+                            {{info.content.description}}
+                        </div>
+                        <div class='infoButton'
+                             ng-click="editInfo()">
+                            EDIT INFO
+                        </div>
+                    </div>
+
+                    <div ng-switch-when="edit">
+                        <input class="title" type="text"
+                               ng-model="info.content.album_name">
+                        <form method="post"  enctype="multipart/form-data">
+                            <label class="cover pointer" for="inputCover"
+                                   style="background-image: url(content/covers/{{info.picture}})">
+                            </label>
+                            <input id="inputCover" type="file" accept="image/*">
+                        </form>
+                        <div class="attr">
+                            Year:
+                            <input type="text"
+                                   ng-model="info.content.year">
+                            <br>Number of tracks:
+                            <input type="text" class="short"
+                                   ng-model="info.content.quantity">
+                            <br>Length:
+                            <input type="text"
+                                   ng-model="info.content.length">
+                        </div>
+                        <textarea class="description scrollbar-inner" type="text"
+                                  ng-model="info.content.description">
+                        </textarea>
+                        <div class='infoButton'
+                             ng-click="updateInfo()">
+                            SAVE INFO
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div ng-switch-when="band">
+
+                <div ng-switch="info.mode">
+                    <div ng-switch-when="display">
+
+                        <div class="title"
+                             style="font-size: {{info.content.band_name.length<=30 ? '25px':'15px'}}">
+                            {{info.content.band_name}}
+                        </div>
+                        <div class="cover"
+                             style="background-image: url(content/logos/{{info.content.logo}})">
+
+                        </div>
+                        <div class="attr">
+                            Country: {{(info.content.country)? info.content.country : 'Unknown'}}
+                            <br>Period: {{(info.content.period)? info.content.period : '???'}}
+                        </div>
+                        <div class="description">
+                            {{info.content.description}}
+                        </div>
+                        <div class='infoButton'
+                             ng-click="editInfo()">
+                            EDIT INFO
+                        </div>
+                    </div>
+
+                    <div ng-switch-when="edit">
+                        <input class="title" type="text"
+                               ng-model="info.content.band_name">
+                        <form method="post"  enctype="multipart/form-data">
+                            <label class="cover pointer" for="inputCover"
+                                   style="background-image: url(content/logos/{{info.picture}})"></label>
+                            <input id="inputCover" type="file" accept="image/*">
+                        </form>
+                        <div class="attr">
+                            Country:
+                            <input type="text"
+                                   ng-model="info.content.country">
+                            <br>Period:
+                            <input type="text"
+                                   ng-model="info.content.period">
+                        </div>
+                        <textarea class="description scrollbar-inner" type="text"
+                                  ng-model="info.content.description">
+                        </textarea>
+                        <div class='infoButton'
+                             ng-click="updateInfo()">
+                            SAVE INFO
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div ng-switch-when="genre">
+
+                <div ng-switch="info.mode">
+                    <div ng-switch-when="display">
+
+                        <div class="title"
+                             style="font-size: {{info.content.genre_name.length<=30 ? '25px':'15px'}}">
+                            {{info.content.genre_name}}
+                        </div>
+                        <div class="description descGenre">
+                            {{info.content.description}}
+                        </div>
+                        <div class='infoButton'
+                             ng-click="editInfo()">
+                            EDIT INFO
+                        </div>
+                    </div>
+
+                   <div ng-switch-when="edit">
+                        <input class="title" type="text"
+                               ng-model="info.content.genre_name">
+                        <textarea class="description descGenre scrollbar-inner" type="text"
+                                  ng-model="info.content.description">
+                        </textarea>
+                        <div class='infoButton'
+                             ng-click="updateInfo()">
+                            SAVE INFO
+                        </div>
+                   </div>
+                </div>
+            </div>
+
+            <div ng-switch-when="loading">
+                LOADING
+            </div>
+        </div>
+    </div>
+
+
+    <div id="MLoader" ng-controller="MLoader">
+        <div id="loader"  style="display: {{(show.loader)? 'block':'none'}}">
+            <div class="closeButton" title="Close Loader"
+                 ng-click="show.loader = false">&#10060;
+            </div>
+            <div>
+                <input id="loadMusic" type="file" accept="audio/*" multiple />
+                <label for="loadMusic">
+                    <div id="loadButton">+</div>
+                </label>
+            </div>
+            <div id="loadStatus" style="display: {{(load.display)? 'inline-block' :'none'}}">
+                <div id="percent">
+                    {{load.percent * 100 + "% is loaded"}}
+                </div>
+                <div id="loadFull">
+                    <div id="loadProgress" style="width: {{load.width}}"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="library"  style="display: {{(show.library)? 'block':'none'}}">
+            <div class="closeButton" title="Close Library"
+                 ng-click="show.library = false">&#10060;
+            </div>
+
+            <div class="filter">
+                <div class="sort"
+                     ng-click="display.order='title'"
+                     ng-class="(display.order=='title')? 'selected': ''">
+                    Sort by Title
+                </div>
+            </div>
+            <div class="filter">
+                <div class="sort"
+                     ng-click="display.order='band_name'"
+                     ng-class="(display.order=='band_name')? 'selected': ''">
+                    Sort by Band
+                </div>
+                <select ng-model="display.filter.band_id">
+                    <option ng-repeat="item in band.id"
+                            value="{{item}}">
+                        {{band.names[$index]}}
+                    </option>
+                    <option value="">all</option>
+                </select>
+            </div>
+            <div class="filter">
+                <div class="sort"
+                     ng-click="display.order='album_name'"
+                     ng-class="(display.order=='album_name')? 'selected': ''">
+                    Sort by Album
+                </div>
+                <select ng-model="display.filter.album_id">
+                    <option ng-repeat="item in album.id"
+                            value="{{item}}">
+                        {{album.names[$index]}}
+                    </option>
+                    <option value="">all</option>
+                </select>
+            </div>
+            <div class="filter">
+                <div class="sort"
+                     ng-click="display.order='genre_name'"
+                     ng-class="(display.order=='genre_name')? 'selected': ''">
+                    Sort by Genre
+                </div>
+                <select ng-model="display.filter.genre_id">
+                    <option ng-repeat="item in genre.id"
+                            value="{{item}}">
+                        {{genre.names[$index]}}
+                    </option>
+                    <option value="">all</option>
+                </select>
+            </div>
+            <div class="filter">
+                <div class="sort"
+                     ng-click="display.order='number'"
+                     ng-class="(display.order=='number')? 'selected': ''">
+                    Sort by Track Number
+                </div>
+            </div>
+            <div class="filter">
+                <div class="sort"
+                     ng-click="display.order='year'"
+                     ng-class="(display.order=='year')? 'selected': ''">
+                    Sort by Year
+                </div>
+            </div>
+            <div id="libraryList" class="scrollbar-inner">
+                    <div ng-repeat="item in filtered = (library |
+                                    orderBy:display.order |
+                                    filter:display.filter)">
+                    <span class="delete" title="Delete"
+                          ng-click="delete(item)">&#215;
+                    </span>
+                    <input id="{{$index}}" type="checkbox"
+                           ng-model="item.onList"/>
+                    <label for="{{$index}}"
+                           ng-class="(item.onList)? 'on': 'off'">
+                        <div></div>
+                    </label>
+                    {{item.band_name}} &mdash; {{item.album_name}} &mdash;
+                    {{item.number}}. {{item.title}} {{(item.year)? '(' + item.year + ')' : ''}}
+                    <span class="genre">
+                        {{item.genre_name}}
+                    </span>
+                </div>
+            </div>
+            <div id="buttons">
+                <div ng-click="selectAll()">
+                    Select all
+                </div>
+                <div ng-click="addToPlaylist()">
+                    Add to Playlist
+                </div>
+                <div ng-click="replacePlaylist()">
+                    Replace Playlist
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+</body>
+</html>
